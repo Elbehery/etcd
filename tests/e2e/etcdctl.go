@@ -20,17 +20,18 @@ import (
 	"strings"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/tests/v3/framework/e2e"
 	"go.etcd.io/etcd/tests/v3/integration"
 )
 
 type Etcdctl struct {
-	connType  clientConnType
+	connType  e2e.ClientConnType
 	isAutoTLS bool
 	endpoints []string
 	v2        bool
 }
 
-func NewEtcdctl(endpoints []string, connType clientConnType, isAutoTLS bool, v2 bool) *Etcdctl {
+func NewEtcdctl(endpoints []string, connType e2e.ClientConnType, isAutoTLS bool, v2 bool) *Etcdctl {
 	return &Etcdctl{
 		endpoints: endpoints,
 		connType:  connType,
@@ -51,7 +52,16 @@ func (ctl *Etcdctl) Put(key, value string) error {
 	}
 	args := ctl.cmdArgs()
 	args = append(args, "put", key, value)
-	return spawnWithExpectWithEnv(args, ctl.env(), "OK")
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "OK")
+}
+
+func (ctl *Etcdctl) PutWithAuth(key, value, username, password string) error {
+	if ctl.v2 {
+		panic("Unsupported method for v2")
+	}
+	args := ctl.cmdArgs()
+	args = append(args, "--user", fmt.Sprintf("%s:%s", username, password), "put", key, value)
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "OK")
 }
 
 func (ctl *Etcdctl) Set(key, value string) error {
@@ -60,7 +70,7 @@ func (ctl *Etcdctl) Set(key, value string) error {
 	}
 	args := ctl.cmdArgs()
 	args = append(args, "set", key, value)
-	lines, err := runUtilCompletion(args, ctl.env())
+	lines, err := e2e.RunUtilCompletion(args, ctl.env())
 	if err != nil {
 		return err
 	}
@@ -69,6 +79,32 @@ func (ctl *Etcdctl) Set(key, value string) error {
 		return fmt.Errorf("Got unexpected response %q, expected %q", response, value)
 	}
 	return nil
+}
+
+func (ctl *Etcdctl) AuthEnable() error {
+	args := ctl.cmdArgs("auth", "enable")
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "Authentication Enabled")
+}
+
+func (ctl *Etcdctl) UserGrantRole(user string, role string) (*clientv3.AuthUserGrantRoleResponse, error) {
+	var resp clientv3.AuthUserGrantRoleResponse
+	err := ctl.spawnJsonCmd(&resp, "user", "grant-role", user, role)
+	return &resp, err
+}
+
+func (ctl *Etcdctl) UserAdd(name, password string) (*clientv3.AuthUserAddResponse, error) {
+	args := []string{"user", "add"}
+	if password == "" {
+		args = append(args, name)
+		args = append(args, "--no-password")
+	} else {
+		args = append(args, fmt.Sprintf("%s:%s", name, password))
+	}
+	args = append(args, "--interactive=false")
+
+	var resp clientv3.AuthUserAddResponse
+	err := ctl.spawnJsonCmd(&resp, args...)
+	return &resp, err
 }
 
 func (ctl *Etcdctl) AlarmList() (*clientv3.AlarmResponse, error) {
@@ -89,17 +125,35 @@ func (ctl *Etcdctl) MemberList() (*clientv3.MemberListResponse, error) {
 	return &resp, err
 }
 
+func (ctl *Etcdctl) MemberAdd(name string, peerURLs []string) (*clientv3.MemberAddResponse, error) {
+	if ctl.v2 {
+		panic("Unsupported method for v2")
+	}
+	var resp clientv3.MemberAddResponse
+	err := ctl.spawnJsonCmd(&resp, "member", "add", name, "--peer-urls", strings.Join(peerURLs, ","))
+	return &resp, err
+}
+
+func (ctl *Etcdctl) MemberRemove(id uint64) (*clientv3.MemberRemoveResponse, error) {
+	if ctl.v2 {
+		panic("Unsupported method for v2")
+	}
+	var resp clientv3.MemberRemoveResponse
+	err := ctl.spawnJsonCmd(&resp, "member", "remove", fmt.Sprintf("%x", id))
+	return &resp, err
+}
+
 func (ctl *Etcdctl) Compact(rev int64) (*clientv3.CompactResponse, error) {
 	if ctl.v2 {
 		panic("Unsupported method for v2")
 	}
 	args := ctl.cmdArgs("compact", fmt.Sprint(rev))
-	return nil, spawnWithExpectWithEnv(args, ctl.env(), fmt.Sprintf("compacted revision %v", rev))
+	return nil, e2e.SpawnWithExpectWithEnv(args, ctl.env(), fmt.Sprintf("compacted revision %v", rev))
 }
 
 func (ctl *Etcdctl) spawnJsonCmd(output interface{}, args ...string) error {
 	args = append(args, "-w", "json")
-	cmd, err := spawnCmd(append(ctl.cmdArgs(), args...), ctl.env())
+	cmd, err := e2e.SpawnCmd(append(ctl.cmdArgs(), args...), ctl.env())
 	if err != nil {
 		return err
 	}
@@ -111,7 +165,7 @@ func (ctl *Etcdctl) spawnJsonCmd(output interface{}, args ...string) error {
 }
 
 func (ctl *Etcdctl) cmdArgs(args ...string) []string {
-	cmdArgs := []string{ctlBinPath}
+	cmdArgs := []string{e2e.CtlBinPath}
 	for k, v := range ctl.flags() {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--%s=%s", k, v))
 	}
@@ -122,13 +176,13 @@ func (ctl *Etcdctl) flags() map[string]string {
 	fmap := make(map[string]string)
 	if ctl.v2 {
 		fmap["no-sync"] = "true"
-		if ctl.connType == clientTLS {
+		if ctl.connType == e2e.ClientTLS {
 			fmap["ca-file"] = integration.TestTLSInfo.TrustedCAFile
 			fmap["cert-file"] = integration.TestTLSInfo.CertFile
 			fmap["key-file"] = integration.TestTLSInfo.KeyFile
 		}
 	} else {
-		if ctl.connType == clientTLS {
+		if ctl.connType == e2e.ClientTLS {
 			if ctl.isAutoTLS {
 				fmap["insecure-transport"] = "false"
 				fmap["insecure-skip-tls-verify"] = "true"

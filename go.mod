@@ -21,16 +21,16 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	go.etcd.io/bbolt v1.3.8
-	go.etcd.io/etcd/api/v3 v3.5.11
-	go.etcd.io/etcd/client/pkg/v3 v3.5.11
-	go.etcd.io/etcd/client/v2 v2.305.11
-	go.etcd.io/etcd/client/v3 v3.5.11
-	go.etcd.io/etcd/etcdctl/v3 v3.5.11
-	go.etcd.io/etcd/etcdutl/v3 v3.5.11
-	go.etcd.io/etcd/pkg/v3 v3.5.11
-	go.etcd.io/etcd/raft/v3 v3.5.11
-	go.etcd.io/etcd/server/v3 v3.5.11
-	go.etcd.io/etcd/tests/v3 v3.5.11
+	go.etcd.io/etcd/api/v3 v3.5.12
+	go.etcd.io/etcd/client/pkg/v3 v3.5.12
+	go.etcd.io/etcd/client/v2 v2.305.12
+	go.etcd.io/etcd/client/v3 v3.5.12
+	go.etcd.io/etcd/etcdctl/v3 v3.5.12
+	go.etcd.io/etcd/etcdutl/v3 v3.5.12
+	go.etcd.io/etcd/pkg/v3 v3.5.12
+	go.etcd.io/etcd/raft/v3 v3.5.12
+	go.etcd.io/etcd/server/v3 v3.5.12
+	go.etcd.io/etcd/tests/v3 v3.5.12
 	go.uber.org/zap v1.17.0
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/grpc v1.59.0
@@ -82,10 +82,10 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
