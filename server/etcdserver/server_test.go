@@ -663,7 +663,6 @@ func TestApplyConfigChangeUpdatesConsistIndex(t *testing.T) {
 		consistIndex: ci,
 		beHooks:      &backendHooks{lg: lg, indexer: ci},
 	}
-	defer srv.r.Stop()
 
 	// create EntryConfChange entry
 	now := time.Now()
@@ -1014,7 +1013,6 @@ func TestSyncTrigger(t *testing.T) {
 // TestSnapshot as snapshot should snapshot the store and cut the persistent
 func TestSnapshot(t *testing.T) {
 	be, _ := betesting.NewDefaultTmpBackend(t)
-	defer betesting.Close(t, be)
 
 	s := raft.NewMemoryStorage()
 	s.Append([]raftpb.Entry{{Index: 1}})
@@ -1034,11 +1032,6 @@ func TestSnapshot(t *testing.T) {
 		consistIndex: cindex.NewConsistentIndex(be),
 	}
 	srv.kv = mvcc.New(zap.NewExample(), be, &lease.FakeLessor{}, mvcc.StoreConfig{})
-
-	defer func() {
-		assert.NoError(t, srv.kv.Close())
-	}()
-
 	srv.be = be
 
 	ch := make(chan struct{}, 2)
@@ -1609,7 +1602,6 @@ func TestPublishV3(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	lg := zaptest.NewLogger(t)
 	be, _ := betesting.NewDefaultTmpBackend(t)
-	defer betesting.Close(t, be)
 	srv := &EtcdServer{
 		lgMu:       new(sync.RWMutex),
 		lg:         lg,
@@ -1680,7 +1672,6 @@ func TestPublishV3Retry(t *testing.T) {
 
 	lg := zaptest.NewLogger(t)
 	be, _ := betesting.NewDefaultTmpBackend(t)
-	defer betesting.Close(t, be)
 	srv := &EtcdServer{
 		lgMu:       new(sync.RWMutex),
 		lg:         lg,
