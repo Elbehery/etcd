@@ -20,17 +20,18 @@ import (
 	"strings"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/tests/v3/framework/e2e"
 	"go.etcd.io/etcd/tests/v3/integration"
 )
 
 type Etcdctl struct {
-	connType  ClientConnType
+	connType  e2e.ClientConnType
 	isAutoTLS bool
 	endpoints []string
 	v2        bool
 }
 
-func NewEtcdctl(endpoints []string, connType ClientConnType, isAutoTLS bool, v2 bool) *Etcdctl {
+func NewEtcdctl(endpoints []string, connType e2e.ClientConnType, isAutoTLS bool, v2 bool) *Etcdctl {
 	return &Etcdctl{
 		endpoints: endpoints,
 		connType:  connType,
@@ -51,7 +52,7 @@ func (ctl *Etcdctl) Put(key, value string) error {
 	}
 	args := ctl.cmdArgs()
 	args = append(args, "put", key, value)
-	return SpawnWithExpectWithEnv(args, ctl.env(), "OK")
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "OK")
 }
 
 func (ctl *Etcdctl) PutWithAuth(key, value, username, password string) error {
@@ -60,7 +61,7 @@ func (ctl *Etcdctl) PutWithAuth(key, value, username, password string) error {
 	}
 	args := ctl.cmdArgs()
 	args = append(args, "--user", fmt.Sprintf("%s:%s", username, password), "put", key, value)
-	return SpawnWithExpectWithEnv(args, ctl.env(), "OK")
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "OK")
 }
 
 func (ctl *Etcdctl) Set(key, value string) error {
@@ -69,7 +70,7 @@ func (ctl *Etcdctl) Set(key, value string) error {
 	}
 	args := ctl.cmdArgs()
 	args = append(args, "set", key, value)
-	lines, err := RunUtilCompletion(args, ctl.env())
+	lines, err := e2e.RunUtilCompletion(args, ctl.env())
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func (ctl *Etcdctl) Set(key, value string) error {
 
 func (ctl *Etcdctl) AuthEnable() error {
 	args := ctl.cmdArgs("auth", "enable")
-	return SpawnWithExpectWithEnv(args, ctl.env(), "Authentication Enabled")
+	return e2e.SpawnWithExpectWithEnv(args, ctl.env(), "Authentication Enabled")
 }
 
 func (ctl *Etcdctl) UserGrantRole(user string, role string) (*clientv3.AuthUserGrantRoleResponse, error) {
@@ -147,28 +148,12 @@ func (ctl *Etcdctl) Compact(rev int64) (*clientv3.CompactResponse, error) {
 		panic("Unsupported method for v2")
 	}
 	args := ctl.cmdArgs("compact", fmt.Sprint(rev))
-	return nil, SpawnWithExpectWithEnv(args, ctl.env(), fmt.Sprintf("compacted revision %v", rev))
-}
-
-func (ctl *Etcdctl) Status() ([]*clientv3.StatusResponse, error) {
-	var epStatus []*struct {
-		Endpoint string
-		Status   *clientv3.StatusResponse
-	}
-	err := ctl.spawnJsonCmd(&epStatus, "endpoint", "status")
-	if err != nil {
-		return nil, err
-	}
-	resp := make([]*clientv3.StatusResponse, len(epStatus))
-	for i, e := range epStatus {
-		resp[i] = e.Status
-	}
-	return resp, err
+	return nil, e2e.SpawnWithExpectWithEnv(args, ctl.env(), fmt.Sprintf("compacted revision %v", rev))
 }
 
 func (ctl *Etcdctl) spawnJsonCmd(output interface{}, args ...string) error {
 	args = append(args, "-w", "json")
-	cmd, err := SpawnCmd(append(ctl.cmdArgs(), args...), ctl.env())
+	cmd, err := e2e.SpawnCmd(append(ctl.cmdArgs(), args...), ctl.env())
 	if err != nil {
 		return err
 	}
@@ -180,7 +165,7 @@ func (ctl *Etcdctl) spawnJsonCmd(output interface{}, args ...string) error {
 }
 
 func (ctl *Etcdctl) cmdArgs(args ...string) []string {
-	cmdArgs := []string{CtlBinPath}
+	cmdArgs := []string{e2e.CtlBinPath}
 	for k, v := range ctl.flags() {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--%s=%s", k, v))
 	}
@@ -191,13 +176,13 @@ func (ctl *Etcdctl) flags() map[string]string {
 	fmap := make(map[string]string)
 	if ctl.v2 {
 		fmap["no-sync"] = "true"
-		if ctl.connType == ClientTLS {
+		if ctl.connType == e2e.ClientTLS {
 			fmap["ca-file"] = integration.TestTLSInfo.TrustedCAFile
 			fmap["cert-file"] = integration.TestTLSInfo.CertFile
 			fmap["key-file"] = integration.TestTLSInfo.KeyFile
 		}
 	} else {
-		if ctl.connType == ClientTLS {
+		if ctl.connType == e2e.ClientTLS {
 			if ctl.isAutoTLS {
 				fmap["insecure-transport"] = "false"
 				fmap["insecure-skip-tls-verify"] = "true"
