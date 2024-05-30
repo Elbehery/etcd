@@ -61,8 +61,6 @@ type EtcdProcess interface {
 	PeerProxy() proxy.Server
 	Failpoints() *BinaryFailpoints
 	IsRunning() bool
-
-	Etcdctl(connType ClientConnType, isAutoTLS bool, v2 bool) *Etcdctl
 }
 
 type LogsExpect interface {
@@ -97,11 +95,10 @@ type EtcdServerProcessConfig struct {
 	Murl          string
 	ClientHttpUrl string
 
-	InitialToken        string
-	InitialCluster      string
-	GoFailPort          int
-	GoFailClientTimeout time.Duration
-	Proxy               *proxy.ServerConfig
+	InitialToken   string
+	InitialCluster string
+	GoFailPort     int
+	Proxy          *proxy.ServerConfig
 }
 
 func NewEtcdServerProcess(cfg *EtcdServerProcessConfig) (*EtcdServerProcess, error) {
@@ -115,10 +112,7 @@ func NewEtcdServerProcess(cfg *EtcdServerProcessConfig) (*EtcdServerProcess, err
 	}
 	ep := &EtcdServerProcess{cfg: cfg, donec: make(chan struct{})}
 	if cfg.GoFailPort != 0 {
-		ep.failpoints = &BinaryFailpoints{
-			member:        ep,
-			clientTimeout: cfg.GoFailClientTimeout,
-		}
+		ep.failpoints = &BinaryFailpoints{member: ep}
 	}
 	return ep, nil
 }
@@ -266,14 +260,9 @@ func (ep *EtcdServerProcess) IsRunning() bool {
 	return false
 }
 
-func (ep *EtcdServerProcess) Etcdctl(connType ClientConnType, isAutoTLS, v2 bool) *Etcdctl {
-	return NewEtcdctl(ep.EndpointsV3(), connType, isAutoTLS, v2)
-}
-
 type BinaryFailpoints struct {
 	member         EtcdProcess
 	availableCache map[string]string
-	clientTimeout  time.Duration
 }
 
 func (f *BinaryFailpoints) SetupEnv(failpoint, payload string) error {
@@ -294,12 +283,6 @@ func (f *BinaryFailpoints) SetupHTTP(ctx context.Context, failpoint, payload str
 	r, err := http.NewRequestWithContext(ctx, "PUT", failpointUrl.String(), bytes.NewBuffer([]byte(payload)))
 	if err != nil {
 		return err
-	}
-	httpClient := http.Client{
-		Timeout: 1 * time.Second,
-	}
-	if f.clientTimeout != 0 {
-		httpClient.Timeout = f.clientTimeout
 	}
 	resp, err := httpClient.Do(r)
 	if err != nil {
@@ -323,12 +306,6 @@ func (f *BinaryFailpoints) DeactivateHTTP(ctx context.Context, failpoint string)
 	if err != nil {
 		return err
 	}
-	httpClient := http.Client{
-		Timeout: 1 * time.Second,
-	}
-	if f.clientTimeout != 0 {
-		httpClient.Timeout = f.clientTimeout
-	}
 	resp, err := httpClient.Do(r)
 	if err != nil {
 		return err
@@ -338,6 +315,10 @@ func (f *BinaryFailpoints) DeactivateHTTP(ctx context.Context, failpoint string)
 		return fmt.Errorf("bad status code: %d", resp.StatusCode)
 	}
 	return nil
+}
+
+var httpClient = http.Client{
+	Timeout: 1 * time.Second,
 }
 
 func (f *BinaryFailpoints) Enabled() bool {
