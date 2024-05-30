@@ -37,9 +37,6 @@ jobs:
 
           echo "${TARGET}"
           case "${TARGET}" in
-            linux-test-smoke)
-              GOARCH=${{ inputs.arch }} CPU=4 RACE='false' make test-smoke
-              ;;
             linux-integration-1-cpu)
               make install-gofail
               GOARCH=${{ inputs.arch }} CPU=1 RACE='false' FAILPOINTS='true' make test-integration

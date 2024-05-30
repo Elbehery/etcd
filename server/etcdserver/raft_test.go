@@ -198,7 +198,7 @@ func TestConfigChangeBlocksApply(t *testing.T) {
 		updateLead:       func(uint64) {},
 		updateLeadership: func(bool) {},
 	})
-	defer srv.r.stop()
+	defer srv.r.Stop()
 
 	n.readyc <- raft.Ready{
 		SoftState:        &raft.SoftState{RaftState: raft.StateFollower},
