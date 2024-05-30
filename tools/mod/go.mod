@@ -2,8 +2,6 @@ module go.etcd.io/etcd/tools/v3
 
 go 1.20
 
-toolchain go1.21.10
-
 require (
 	github.com/akhenakh/hunspellgo v0.0.0-20160221122622-9db38fa26e19 // indirect
 	github.com/alexkohler/nakedret v1.0.0
